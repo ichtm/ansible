@@ -39,7 +39,7 @@ from ansible.utils.hashing import checksum
 # Supplement the FILE_COMMON_ARGUMENTS with arguments that are specific to file
 REAL_FILE_ARGS = frozenset(FILE_COMMON_ARGUMENTS.keys()).union(
                           ('state', 'path', '_original_basename', 'recurse', 'force',
-                           '_diff_peek', 'src', 'delete'))
+                           '_diff_peek', 'src'))
 
 
 def _create_remote_file_args(module_args):
@@ -411,6 +411,7 @@ class ActionModule(ActionBase):
         dest = self._task.args.get('dest', None)
         remote_src = boolean(self._task.args.get('remote_src', False), strict=False)
         local_follow = boolean(self._task.args.get('local_follow', True), strict=False)
+        sync_delete = boolean(self._task.args.get('delete', False), strict=False)
 
         result['failed'] = True
         if not source and content is None:
@@ -421,6 +422,8 @@ class ActionModule(ActionBase):
             result['msg'] = 'src and content are mutually exclusive'
         elif content is not None and dest is not None and dest.endswith("/"):
             result['msg'] = "can not use content with a dir as dest"
+        elif sync_delete and dest is not None and not dest.endswith("/"):
+            result['msg'] = "can only use sync_delete with a dir as dest"
         else:
             del result['failed']
 
@@ -499,6 +502,23 @@ class ActionModule(ActionBase):
 
         # expand any user home dir specifier
         dest = self._remote_expand_user(dest)
+
+
+        # TODO: MY_TODO insert "stat" + "files:absent"-deletion for dir2dir synchronization here
+        # query delete flag
+        if sync_delete:
+
+            # use stat module to fetch files list from target machine
+            stat_args = _create_remote_file_args(self._task.args)
+            stat_args['path'] = os.path.join(dest, dest_path)
+            # request dest_files list
+            module_return = self._execute_module(module_name='stat', module_args=stat_args, task_vars=task_vars)
+
+            # compare to source_files list
+            # delete no-more-to-exist dest-files
+
+
+
 
         implicit_directories = set()
         for source_full, source_rel in source_files['files']:

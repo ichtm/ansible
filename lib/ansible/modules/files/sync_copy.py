@@ -277,6 +277,8 @@ from ansible.module_utils.common.process import get_bin_path
 from ansible.module_utils._text import to_bytes, to_native
 from ansible.module_utils.six import PY3
 
+# depend on file module for file-walk and state detection
+from ansible.modules.files.file import ensure_absent, get_state, initial_diff
 
 # The AnsibleModule object
 module = None
@@ -510,6 +512,7 @@ def run_module():
             local_follow=dict(type='bool'),
             checksum=dict(type='str'),
             follow=dict(type='bool', default=False),
+            delete=dict(type='bool', default=False)
         ),
         add_file_common_args=True,
         supports_check_mode=True,
@@ -536,6 +539,7 @@ def run_module():
     group = module.params['group']
     remote_src = module.params['remote_src']
     checksum = module.params['checksum']
+    delete = module.params['delete']
 
     if not os.path.exists(b_src):
         module.fail_json(msg="Source %s not found" % (src))
